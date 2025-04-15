@@ -1,0 +1,184 @@
+---
+title: "Exercício Demografia ME721"
+author: "Thales de Souza Crivillari RA:236312"
+date: "2025-04-15"
+output:
+  pdf_document: default
+  html_document: default
+header-includes: \usepackage{amsmath}
+---
+
+# A Microrregião escolhida foi Braganca Paulista
+
+Ela contempla as seguintes cidades:
+
+ * Bragança Paulista
+ 
+ * Atibaia
+
+ * Bom Jesus dos Perdões
+
+ * Joanópolis
+
+ * Nazaré Paulista
+
+ * Pedra Bela
+
+ * Pinhalzinho
+
+ * Piracaia
+
+ * Tuiuti
+
+ * Vargem
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+
+
+```{r}
+
+dado2010=read.csv('ibge_cnv_popbr004949187_106_45_118.csv',sep=';', skip=5, nrows=12, header=F)
+colnames(dado2010)=c('Idade','Masculino','Feminino','Total') 
+dado2010$Ano <- 2010
+tot2010 <- sum(dado2010$Total)
+dado2010 <- dado2010 %>%
+  mutate(Masculino = Masculino/tot2010,
+         Feminino =Feminino/tot2010)
+
+
+
+dado1980=read.csv('ibge_cnv_popbr012331187_106_45_118.csv',sep=';', skip=5, nrows=12, header=F)
+colnames(dado1980)=c('Idade','Masculino','Feminino','Total')
+dado1980$Ano <- 1980
+tot1980 <- sum(dado1980$Total)
+dado1980 <- dado1980 %>%
+  mutate(Masculino = Masculino/tot1980,
+         Feminino =Feminino/tot1980)
+
+```
+
+# 1)
+
+```{r }
+
+
+dados <- bind_rows(dado1980, dado2010)
+dados$Idade[dados$Idade == "Menor 1 ano"] <- "0 anos"
+ordem_idade <- c("0 anos", "1 a 4 anos", "5 a 9 anos", "10 a 14 anos",
+                 "15 a 19 anos", "20 a 29 anos", "30 a 39 anos",
+                 "40 a 49 anos", "50 a 59 anos", "60 a 69 anos",
+                 "70 a 79 anos", "80 anos e mais")
+dados$Idade <- factor(dados$Idade, levels = ordem_idade)
+
+dados_long <- dados %>%
+  pivot_longer(cols = c("Masculino", "Feminino"), names_to = "Sexo", values_to = "Populacao") %>%
+  mutate(Populacao = ifelse(Sexo == "Masculino", Populacao, -Populacao))
+
+
+ piramide <-ggplot(dados_long, aes(x = Idade, y = Populacao, fill = Sexo)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  facet_wrap(~Ano) +
+  scale_y_continuous(labels = abs) +
+  labs(title = "Pirâmide Etária da Microrregião de Bragança Paulista", y = "População", x = "Idade") +
+  theme_minimal()
+
+ 
+ piramide
+
+```
+
+Pelo gráfico, é possível observar que, em 1980, a base da pirâmide etária era  mais larga, indicando uma população mias jovem. Já em 2010, essa base se estreita, revelando uma redução nas taxas de natalidade e um processo de envelhecimento populacional. Issomostra que a Microrregião de Bragança Paulista se encontra em um estágio mais avançado da transição demográfica. Interessante observar, também, o envelhecimento da população,que é mais acentuada nas mulheres, que predominam nas faixas etárias mais elevadas, refletindo sua maior expectativa de vida.
+
+#  2)
+
+### A fórmula para a taxa de crescimento geométrica é dada por:
+
+$$
+r = \left( \frac{P_{2010}}{P_{1980}} \right)^{\frac{1}{30}} - 1
+$$
+
+### Taxa de Crescimento Exponencial
+
+A fórmula para a taxa de crescimento exponencial é:
+
+$$
+r = \frac{\ln \left( \frac{P_{2010}}{P_{1980}} \right)}{30}
+$$
+
+### Razão de Dependência
+
+A razão de dependência é dada por:
+
+$$
+\text{Razão de Dependência} = \frac{\text{População de 0--14 anos} + \text{População de 65 anos ou mais}}{\text{População de 15--64 anos}}
+$$
+
+```{r, echo=FALSE}
+pop1980 <- sum(dado1980$Total)
+pop2010 <- sum(dado2010$Total)
+
+#Taxa de crescimento geométrica e exponencial
+taxa_geom <- (pop2010 / pop1980)^(1/30) - 1
+taxa_exp <- log(pop2010 / pop1980) / 30
+
+
+```
+
+A taxa de crescimento geométrica foi de `r taxa_geom`, enquanto a taxa de crescimento exponencial foi de `r taxa_exp`. Apesar desse crescimento expressivo ao longo do período analisado, é esperado que ele desacelere nas próximas décadas, uma vez que a população está envelhecendo e o número de pessoas em idade fértil vem diminuindo. Esse processo é evidenciado pela razão de dependência, que caiu de 0,67 em 1980 para 0,49 em 2010, indicando uma menor proporção de jovens dependentes em relação à população economicamente ativa. Isso revela uma transição demográfica em curso, com implicações importantes para o futuro social e econômico da região. Além disso, a diminuição no número de filhos pode estar relacionada à crescente urbanização da cidade e à mudança nos fluxos familiares, que impactam diretamente as decisões reprodutivas e o estilo de vida das famílias.
+
+```{r }
+
+jovens <- c("0 anos", "1 a 4 anos", "5 a 9 anos", "10 a 14 anos")
+ativos<- c("15 a 19 anos", "20 a 29 anos", "30 a 39 anos",
+                 "40 a 49 anos", "50 a 59 anos") 
+idosos <- c("60 a 69 anos","70 a 79 anos", "80 anos e mais")
+
+dep_1980 <- (sum(dado1980$Total[dado1980$Idade %in% jovens]) + sum(dado1980$Total[dado1980$Idade %in% idosos])) / sum(dado1980$Total[dado1980$Idade %in% ativos])
+
+dep_2010 <- (sum(dado2010$Total[dado2010$Idade %in% jovens]) + sum(dado2010$Total[dado2010$Idade %in% idosos])) / sum(dado2010$Total[dado2010$Idade %in% ativos])
+
+
+
+
+
+
+```
+
+# 3)
+
+```{r }
+
+razao1980 <- dado1980 %>% mutate(Razao = Masculino / Feminino)
+razao2010 <- dado2010 %>% mutate(Razao = Masculino / Feminino)
+
+razao <- bind_rows(razao1980, razao2010)
+razao$Idade <- c("0", "1-4", "5-9", "10-14", 
+  "15-19", "20-29", "30-39", 
+  "40-49", "50-59", "60-69", 
+  "70-79", "80+")
+
+ ordembonita <- c("0", "1-4", "5-9", "10-14", 
+  "15-19", "20-29", "30-39", 
+  "40-49", "50-59", "60-69", 
+  "70-79", "80+")
+ 
+razao$Idade <- factor(razao$Idade, levels = ordembonita)
+
+
+RAZAOSEXOS <- ggplot(razao, aes(x = Idade, y = Razao, group = Ano, color = factor(Ano))) +
+  geom_line() + geom_point() +
+  labs(title = "Razão entre os Sexos por Idade", y = "Razão H/M", x = "Idade", color = "Ano") +
+  theme_minimal()
+
+
+RAZAOSEXOS
+
+```
+Em Bragança Paulista no ano de 1980, a razão H/M abaixo de 1,05 no nascimento pode refletir subregistro de nascimentos masculinos e maior mortalidade infantil em meninos, típico de regiões rurais em transição demográfica (SEADE), mas com a melhora do sistema de saúde ela se mateve ideal em 2010.
+ Outro ponto é que o gráfico mostra mais homens nas faixas de 20-59 anos, especialmente em 1980, oq nao e normal, esse numero pode ser por causa do número de trabalhos "masculinos" (agropecuária, indústria) que retêm homens adultos ou um subresgitro feminino, mas ja em 2010 ela reflete o processo normal, uma abundacia maior de mulheres com idade avancada.
